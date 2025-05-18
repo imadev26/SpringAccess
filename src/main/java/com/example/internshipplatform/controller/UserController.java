@@ -34,7 +34,7 @@ public class UserController {
     private UserRepository userRepository;
 
     @GetMapping("/students/{id}")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('COMPANY')")
     public ResponseEntity<Student> getStudentDetails(@PathVariable String id) {
         return studentRepository.findById(id)
                 .map(ResponseEntity::ok)
@@ -50,7 +50,7 @@ public class UserController {
     }
     
     @PutMapping("/students/{id}")
-    @PreAuthorize("hasRole('STUDENT') and #id == authentication.principal.id or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('STUDENT') and #id == authentication.principal.id or hasRole('COMPANY')")
     public ResponseEntity<?> updateStudentProfile(
             @PathVariable String id,
             @RequestBody UpdateStudentRequest updateRequest) {

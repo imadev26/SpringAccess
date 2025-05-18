@@ -144,4 +144,52 @@ public class ApplicationController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    // GET application by ID - Protected: COMPANY (own offer's applications) or ADMIN only
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('COMPANY') or hasRole('ADMIN')")
+    public ResponseEntity<?> getApplicationById(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        try {
+            Optional<Application> applicationOpt = applicationRepository.findById(id);
+
+            if (applicationOpt.isEmpty()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "Application not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            Application application = applicationOpt.get();
+
+            // Check if the authenticated user is a COMPANY and owns the offer associated with this application
+            if (userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_COMPANY"))) {
+                 Optional<Offer> offerOpt = offerRepository.findById(application.getOfferId());
+
+                 if (offerOpt.isEmpty()) {
+                     // This should ideally not happen if data is consistent, but handle defensively
+                     Map<String, String> response = new HashMap<>();
+                     response.put("error", "Associated offer not found");
+                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+                 }
+
+                 Offer offer = offerOpt.get();
+
+                 if (!offer.getCompanyId().equals(userPrincipal.getId())) {
+                     Map<String, String> response = new HashMap<>();
+                     response.put("error", "You do not have permission to access this application");
+                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                 }
+            }
+            // Admins are already authorized by @PreAuthorize
+
+            return ResponseEntity.ok(application);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Failed to retrieve application details: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 } 

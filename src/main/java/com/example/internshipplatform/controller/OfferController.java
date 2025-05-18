@@ -62,6 +62,25 @@ public class OfferController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    // GET offers by company ID - Protected: COMPANY (own offers) or ADMIN only
+    @GetMapping("/company/{companyId}")
+    @PreAuthorize("hasRole('COMPANY') and #companyId == authentication.principal.id or hasRole('ADMIN')")
+    public ResponseEntity<?> getOffersByCompanyId(
+            @PathVariable String companyId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        try {
+            // The @PreAuthorize annotation handles the authorization check.
+            // We can directly fetch offers for the given companyId.
+            List<Offer> offers = offerRepository.findByCompanyId(companyId);
+            return ResponseEntity.ok(offers);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Failed to retrieve offers: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     // CREATE new offer - Protected: COMPANY only
     @PostMapping
     @PreAuthorize("hasRole('COMPANY')")
